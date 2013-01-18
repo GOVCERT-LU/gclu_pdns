@@ -1,0 +1,6 @@
+*.pyc
+*.swp
+process_queue.sh
+pdns_pcap_parser.conf
+run_dnscap.sh
+ignore_domains

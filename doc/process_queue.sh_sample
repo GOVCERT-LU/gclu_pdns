@@ -1,0 +1,62 @@
+#!/bin/bash
+
+# Copyright (c) 2013 GOVCERT.LU / Georges Toth & Foetz Guy
+
+PDNSROOT=/path/to/passive_dns
+PDNSOUTPUTROOT=/log/passive_dns
+SENSOR=sensor-name
+LOCKFILE=/tmp/pdns_pcap_parser.lock
+QUEUE=${PDNSOUTPUTROOT}/queue
+SPOOL=${PDNSOUTPUTROOT}/spool
+ARCHIVE=${PDNSOUTPUTROOT}/archive
+DNSCAP=${PDNSROOT}/dnscap
+PDNS=${PDNSROOT}/pdns_pcap_parser.py
+PDNSCONFIG=${PDNSROOT}/pdns_pcap_parser.conf
+DOMIGNOREFILE=${PDNSROOT}/ignore_domains
+
+
+if [ -f $LOCKFILE ]
+then
+  exit 1
+else
+  touch $LOCKFILE
+fi
+
+
+DATE_Y=$(date +%Y)
+DATE_M=$(date +%m)
+DATE_D=$(date +%d)
+DST_PATH=${ARCHIVE}/${DATE_Y}/${DATE_M}/${DATE_D}
+
+if [ ! -d ${DST_PATH} ]
+then
+  mkdir -p ${DST_PATH}
+fi
+
+
+for k in `find ${QUEUE} -type f ! -name \*.part | sort`
+do
+  FDATE=$(echo $k | cut -d "." -f 2)
+  FTIME=$(echo $k | cut -d "." -f 3)
+  FNAME="merged_${FDATE}_${FTIME}.pcap"
+
+  mv $k ${SPOOL}/
+done
+
+DST_FILE=${SPOOL}/${FNAME}
+FINAL_DST_FILE=${DST_PATH}/${FNAME}
+
+mergecap -w ${DST_FILE} `find ${SPOOL} -type f ! -name \*.part | sort | xargs`
+
+
+DST_FILE_SIZE=$(du -b "${DST_FILE}" | cut -f 1)
+
+if [ $DST_FILE_SIZE -ge 1000000 ]
+then
+  time ${DNSCAP} -r ${DST_FILE} -g 2>&1 | python ${PDNS} -i - --db -s ${SENSOR} -c ${PDNSCONFIG} --ignore=${DOMIGNOREFILE}
+
+  mv ${DST_FILE} ${FINAL_DST_FILE}
+  rm ${SPOOL}/*
+
+  rm $LOCKFILE
+fi

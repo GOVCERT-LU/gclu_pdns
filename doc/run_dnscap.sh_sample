@@ -1,0 +1,14 @@
+#!/bin/bash
+
+# Copyright (c) 2013 GOVCERT.LU / Georges Toth & Foetz Guy
+
+PDNSROOT=/path/to/passive_dns
+PDNSOUTPUTROOT=/log/passive_dns
+TIMEOUT=600
+INT=interface
+SENSOR=sensorname
+QUEUE=${PDNSOUTPUTROOT}/queue
+DNSCAP=${PDNSROOT}/dnscap
+
+
+${DNSCAP} -T -s r -i ${INT} -w ${QUEUE}/${SENSOR} -t ${TIMEOUT}

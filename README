@@ -1,0 +1,70 @@
+gclu_pdns is a passive DNS implementation using dnscap for capturing
+DNS traffic and postgresql as a database backend, for storing the
+PDNS data.
+
+Currently this project is still a work in progress, but it has been
+successfully running in production for quite some time.
+
+Hardware requirements depend on the amount of traffic you're seeing,
+thus it is not possible to give a general idea of what is required.
+In general you will need a lot of RAM for caching purposes and fast
+disks as there are some heavy SQL queries being made on each update.
+
+There is still a lot of room for performance increasements, which
+will follow in later commits.
+
+The general idea behind this impementation is to use a relational
+database and to be able to keep historical data over a longer
+period of time.
+
+What is important to note is that at no time any private data will
+be capture nor saved.
+What is captured and saved is only replies from authoritative DNS
+servers. 
+
+
+Dependencies:
+ - python (tested with v2.7)
+ - sqlalchemy (tested with 0.7.2)
+ - postgresql (tested with 9.1.7)
+ - dnscap (https://github.com/GOVCERT-LU/dnscap)
+
+Setup:
+ - setup the database using the dump files in the "doc" folder
+ - copy the "pdns_pcap_parser.conf_sample" file from the "doc"
+   folder to the root of the project while removing "_sample".
+   modify the database parameters
+ - copy the "run_dnscap.sh_sample" file from the "doc"
+   folder to the root of the project while removing "_sample".
+   adapt the parameters
+ - copy the "process_queue.sh_sample" file from the "doc"
+   folder to the root of the project while removing "_sample".
+   adapt the parameters
+
+Usage:
+There are two basic components you'll need:
+ run_dnscap.sh
+ process_queue.sh
+
+ - run_dnscap.sh:
+   this script launches the dnscap capture tool which writes
+   the data it finds to the defined queue folder
+ - process_queue.sh:
+   this scripts should be periodically launched via a cron-job
+   it processes the queued capture files, and moves them to an
+   archive folder for later review
+
+Finally there is a basic script called "pdns_cli.py" which queries the
+database for entries and outputs any matches.
+
+
+Debug / testing:
+For testing purposes you can use an existing PCAP dump, load it into
+dnscap and pipe it to the parser:
+
+./dnscap -T -s r -i eth2 -w sample -t 600
+
+for i in `ls sample*`
+do
+  ./dnscap -r $i -g 2>&1| python pdns_pcap_parser.py --csv ctie
+done
