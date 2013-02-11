@@ -139,7 +139,7 @@ if __name__ == '__main__':
                     help='dump the data as CSV')
   parser.add_option('-s', dest='sensor', type='string', default='',
                     help='sensor name')
-  parser.add_option('-c', dest='config', type='string',
+  parser.add_option('-c', dest='config', type='string', default='',
                     help='configuration file')
   parser.add_option('-d', dest='domain', type='string', default='',
                     help='domain to search for')
@@ -147,18 +147,23 @@ if __name__ == '__main__':
                     help='domain to be used for like query (make sure you know what you are doing!!!!)')
   parser.add_option('--lttl', dest='lowttl', type='int', default=-1,
                     help='get all domains with low TTL as specified (expensive query make sure you know what you are doing!!!!)')
-
+  parser.add_option('--r-a', dest='record_a', type='string', default='',
+                    help='A record to search for')
   parser.add_option('-e', dest='entries', action='store_true', default=False,
                     help='search for entries; also specify record type and record value')
   parser.add_option('--e-rt', dest='record_type', type='string', default='',
                     help='record type')
   parser.add_option('--e-rv', dest='record_value', type='string', default='',
                     help='record value')
+  parser.add_option('--sep', dest='separator', type='string', default='|',
+                    help='separator to use for verbose/csv output')
+  parser.add_option('-v', dest='verbose', action='store_true', default=False,
+                    help='verbose')
 
 
   (options, args) = parser.parse_args()
 
-  if not options.csvdump or (options.domain == '' and options.likedomain == '' and options.lowttl == -1 and not options.entries):
+  if options.domain == '' and options.likedomain == '' and options.lowttl == -1 and not options.entries and options.record_a == '':
     parser.print_help()
     exit(1)
   elif not options.domain == '' and not options.likedomain == '':
@@ -167,7 +172,7 @@ if __name__ == '__main__':
   elif options.entries and (options.record_type == '' or options.record_value == ''):
     print 'specify record type _and_ record  value !!!'
     exit(1)
-  elif options.config.strip(' ') == '':
+  if options.config.strip(' ') == '':
     print 'ERROR: config file required'
     print
     parser.print_help()
@@ -211,3 +216,19 @@ if __name__ == '__main__':
         print get_domain_name(db, k.domain_id)
         last_domain_id = k.domain_id
       print '  ' + str(k)
+  elif not options.record_a == '':
+    entries = get_entries(db, 'a', options.record_a)
+    last_domain_id = -1
+    seen_domains = set()
+    for k in entries:
+      if not k.domain_id in seen_domains:
+        seen_domains.add(k.domain_id)
+      else:
+        continue
+
+      domain_name = get_domain_name(db, k.domain_id)
+
+      if options.verbose:
+        print '{1}{0}{2}{0}{3}{0}{4}'.format(options.separator, domain_name, k.first_seen, k.last_seen, k.count)
+      else:
+        print domain_name
