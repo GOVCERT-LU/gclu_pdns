@@ -7,7 +7,7 @@ PDNSOUTPUTROOT=/log/passive_dns
 TIMEOUT=600
 INT=eth2
 SENSOR=ctie
-QUEUE=${PDNSOUTPUTROOT}/queue
+QUEUE=${PDNSOUTPUTROOT}/queue_csv
 DNSCAP=${PDNSROOT}/dnscap
 PYDNSCAPCSVLOGGER=${PDNSROOT}/dnscap_csv_logger.py
 
