@@ -17,8 +17,10 @@ from optparse import OptionParser
 
 debug = False
 log = None
+filter_domains = False
 ignore_domains_file = ''
 ignore_domains = []
+
 
 
 def signal_handler(signal, frame):
@@ -33,9 +35,12 @@ def signal_handler(signal, frame):
 
 
 def reload_ignore_domains(signal=None, frame=None):
-  if debug:
-    print 'reloading ignore domains...',
+  global filter_domains
+  global ignore_domains
 
+  if debug:
+    print 'reloading ignore domains...'
+  
   new_ignore_domains = []
   f = open(ignore_domains_file, 'rb')
 
@@ -48,12 +53,13 @@ def reload_ignore_domains(signal=None, frame=None):
     new_ignore_domains = tuple(new_ignore_domains)
     filter_domains = True
     ignore_domains = new_ignore_domains
+  else:
+    filter_domains = False
 
   if debug:
-    print 'done'
     print 'loaded {0} domains'.format(len(ignore_domains))
+    print 'done'
     print
-  
 
 
 if __name__ == '__main__':
@@ -89,11 +95,9 @@ if __name__ == '__main__':
   signal.signal(signal.SIGTERM, signal_handler)
   signal.signal(signal.SIGHUP, reload_ignore_domains)
 
-  filter_domains = False
   ignored_domains = 0
   if not options.ignore == '':
     ignore_domains_file = options.ignore
-
     reload_ignore_domains()
 
   curtag = datetime.datetime.now().strftime('%Y%m%d_%H%M')
