@@ -7,6 +7,22 @@
 # and writes results to a file, auto-rotated by a configurable amount of
 # minutes.
 #
+# DNS records
+#   include:
+#   ns a aaaa cname soa mx ptr
+#
+#   exclude:
+#   43 46 47 50 99 16
+#   DS RRSIG NSEC3 SPF TXT
+#
+#   wishlist:
+#   srv dname
+#
+# DNS entry lengths (CSV)
+#   7:  ns a aaaa cname ptr (txt nsec3 rrsig ds nsec spf dname srv)
+#   8:  mx
+#   13: soa
+#
 
 import datetime
 import sys
@@ -20,6 +36,10 @@ log = None
 filter_domains = False
 ignore_domains_file = ''
 ignore_domains = []
+
+record_type = {'a' : 1, 'aaaa' : 28, 'cname' : 5, 'ns' : 2, 'mx' : 15, 'soa' : 6, 'ptr' : 12, 'txt' : 16}
+filter_res_lengths = [7, 8, 13]
+blacklist_record_types = ['43', '46', '47', '50', '99', '16', 'ds', 'rrsig', 'nsec3', 'spf', 'txt']
 
 
 
@@ -120,9 +140,21 @@ if __name__ == '__main__':
         filename = '{0}/{1}_{2}'.format(options.destination, options.sensor, curtag)
         log = open(filename, 'wb')
 
-      if filter_domains:
-        row = l.split(',')
 
+      row = l.split(',')
+
+      # check if entry length matches anything we care about
+      if not len(row) in filter_res_lengths:
+        continue
+
+      record_type = row[4]
+
+      # if record type on blacklist, ignore this entry
+      if record_type in blacklist_record_types:
+        continue
+
+      # if filtering is turned on, filter out blacklisted domains
+      if filter_domains:
         # index 2: A, AAAA, CNAME
         # index 6: CNAME, PTR
         if row[2].endswith(ignore_domains) or row[6].endswith(ignore_domains):
