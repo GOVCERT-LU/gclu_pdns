@@ -28,6 +28,7 @@ import datetime
 import sys
 import signal
 import errno
+import shutil
 from optparse import OptionParser
 
 
@@ -50,11 +51,10 @@ def signal_handler(signal, frame):
   print 'Exiting...'
 
   if log:
-    print 'Closing log...'
-    print
-
-    log.close()
     filename_part = '{0}.part'.format(filename)
+    print 'Closing log "{0}"...'.format(filename_part)
+    print
+    log.close()
     shutil.move(filename_part, filename)
 
   sys.exit(1)
@@ -121,8 +121,6 @@ if __name__ == '__main__':
   signal.signal(signal.SIGTERM, signal_handler)
   signal.signal(signal.SIGHUP, reload_ignore_domains)
 
-  global log
-  global filename
   ignored_domains = 0
   if not options.ignore == '':
     ignore_domains_file = options.ignore
