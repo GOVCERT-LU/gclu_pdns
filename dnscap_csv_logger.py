@@ -33,6 +33,7 @@ from optparse import OptionParser
 
 debug = False
 log = None
+filename = ''
 filter_domains = False
 ignore_domains_file = ''
 ignore_domains = []
@@ -44,12 +45,17 @@ blacklist_record_types = ['43', '46', '47', '50', '99', '16', 'ds', 'rrsig', 'ns
 
 
 def signal_handler(signal, frame):
+  global log
+  global filename
   print 'Exiting...'
 
   if log:
     print 'Closing log...'
     print
+
     log.close()
+    filename_part = '{0}.part'.format(filename)
+    shutil.move(filename_part, filename)
 
   sys.exit(1)
 
@@ -115,6 +121,8 @@ if __name__ == '__main__':
   signal.signal(signal.SIGTERM, signal_handler)
   signal.signal(signal.SIGHUP, reload_ignore_domains)
 
+  global log
+  global filename
   ignored_domains = 0
   if not options.ignore == '':
     ignore_domains_file = options.ignore
@@ -122,7 +130,8 @@ if __name__ == '__main__':
 
   curtag = datetime.datetime.now().strftime('%Y%m%d_%H%M')
   filename = '{0}/{1}_{2}'.format(options.destination, options.sensor, curtag)
-  log = open(filename, 'wb')
+  filename_part = '{0}.part'.format(filename)
+  log = open(filename_part, 'wb')
 
   try:
    for l in sys.stdin:
@@ -136,9 +145,13 @@ if __name__ == '__main__':
           print
 
         log.close()
+        filename_part = '{0}.part'.format(filename)
+        shutil.move(filename_part, filename)
+
         curtag = tag
         filename = '{0}/{1}_{2}'.format(options.destination, options.sensor, curtag)
-        log = open(filename, 'wb')
+        filename_part = '{0}.part'.format(filename)
+        log = open(filename_part, 'wb')
 
 
       row = l.split(',')
