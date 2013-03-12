@@ -132,7 +132,7 @@ if __name__ == '__main__':
       if date.minute % options.rotate == 0 and tag != curtag:
         if options.debug:
           print 'rotating file, old: {0}, new: {1}'.format(curtag, tag)
-          print 'ignored {0} domains'.format(ignored_domains)
+          print 'ignored {0} entries'.format(ignored_domains)
           print
 
         log.close()
