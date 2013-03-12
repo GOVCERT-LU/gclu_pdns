@@ -145,12 +145,14 @@ if __name__ == '__main__':
 
       # check if entry length matches anything we care about
       if not len(row) in filter_res_lengths:
+        ignored_domains += 1
         continue
 
       record_type = row[4]
 
       # if record type on blacklist, ignore this entry
       if record_type in blacklist_record_types:
+        ignored_domains += 1
         continue
 
       # if filtering is turned on, filter out blacklisted domains
