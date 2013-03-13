@@ -11,7 +11,7 @@ __all__ = ['Base', 'Session']
 
 Session = scoped_session(sessionmaker())
 Base = declarative_base()
-filter_rrtype_rev = {1: 'a', 28: 'aaaa', 5: 'cname', 2: 'ns', 15: 'mx', 6: 'soa'}
+filter_rrtype_rev = {1: 'a', 28: 'aaaa', 5: 'cname', 2: 'ns', 15: 'mx', 6: 'soa', 12: 'ptr', 16: 'txt'}
 
 
 class Domain(Base):
