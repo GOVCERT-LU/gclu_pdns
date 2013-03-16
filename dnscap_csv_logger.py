@@ -142,6 +142,7 @@ if __name__ == '__main__':
           print 'ignored {0} entries'.format(ignored_domains)
           print
 
+        ignored_domains = 0
         log.close()
         filename_part = '{0}.part'.format(filename)
         shutil.move(filename_part, filename)
