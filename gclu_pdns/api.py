@@ -16,9 +16,10 @@ import requests
 
 
 class PDNSApi(object):
-  def __init__(self, api_url, api_key, http_timeout=5, ignore_ssl_error=False):
+  def __init__(self, api_url, api_key, http_timeout=5, verify_ssl=False):
     self.api_url = api_url
     self.api_key = api_key
+    self.verify_ssl = verify_ssl
 
   def __request(self, method, data, extra_headers=None):
     url = '{0}/{1}'.format(self.api_url, method)
@@ -28,7 +29,7 @@ class PDNSApi(object):
       for k, v in extra_headers.items():
         headers[k] = v
 
-    r = requests.post(url, data=json.dumps(data), headers=headers)
+    r = requests.post(url, data=json.dumps(data), headers=headers, verify=self.verify_ssl)
 
     r_text = r.text
     if r.text and len(r.text) > 20:
