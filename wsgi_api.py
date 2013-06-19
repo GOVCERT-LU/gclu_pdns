@@ -59,8 +59,14 @@ def is_authorized():
 
 
 def audit():
+  params = {}
+
+  if cherrypy.request.json:
+    for k in cherrypy.request.json:
+      params[k] = cherrypy.request.json[k]
+
   log('{0} {1} {2} {3}'.format(cherrypy.request.headers.get('remote-addr', 'NONE'), cherrypy.request.headers.get('key', ''),
-    cherrypy.request.request_line), str(cherrypy.request.json))
+    cherrypy.request.request_line, str(params)))
 
 
 cherrypy.tools.is_authorized = cherrypy.Tool('before_handler', is_authorized, priority = 49)
