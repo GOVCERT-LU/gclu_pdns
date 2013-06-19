@@ -274,7 +274,6 @@ def application(environ, start_response):
 
   cherrypy.tree.mount(Manage(db), '/', config=wsgi_config)
 
-  log('starting')
   return cherrypy.tree(environ, start_response)
 
 
