@@ -41,6 +41,10 @@ class Entry(Base):
     return 'type: {0}, ttl: {1}, value: {2}, first_seen: {3}, last_seen: {4}, count: {5}'.format(
       filter_rrtype_rev[self.type], self.ttl, self.value, self.first_seen, self.last_seen, self.count)
 
+  def get_dict(self):
+    return {'type' : filter_rrtype_rev[self.type], 'ttl' : self.ttl, 'value' : self.value, 'first_seen' : self.first_seen,
+            'last_seen' : self.last_seen, 'count' : self.count}
+
 
 class Parent_Domain(Base):
   __tablename__ = 'parent_domain' 
