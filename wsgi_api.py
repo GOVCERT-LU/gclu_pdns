@@ -270,6 +270,7 @@ def application(environ, start_response):
 
   cherrypy.config['tools.encode.on'] = True
   cherrypy.config['tools.encode.encoding'] = 'utf-8'
+  cherrypy.config.update(config=wsgi_config)
 
   cherrypy.tree.mount(Manage(db), '/', config=wsgi_config)
 
