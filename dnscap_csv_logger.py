@@ -133,6 +133,9 @@ if __name__ == '__main__':
 
   try:
    for l in sys.stdin:
+      if 'message too long' in l or not ',IN,' in l:
+        continue
+
       date = datetime.datetime.now()
       tag = date.strftime('%Y%m%d_%H%M')
 
@@ -153,7 +156,7 @@ if __name__ == '__main__':
         log = open(filename_part, 'wb')
 
 
-      row = l.split(',')
+      row = l.lower().split(',')
 
       # check if entry length matches anything we care about
       if not len(row) in filter_res_lengths:
