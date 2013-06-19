@@ -12,6 +12,7 @@ __license__ = 'GPL v3+'
 
 import cherrypy
 import os
+import syslog
 try:
   import ConfigParser as configparser
 except ImportError:
@@ -31,16 +32,6 @@ from gclu_pdns.db_model import Base, Session, Domain, Entry, Parent_Domain, Sens
 filter_rrtype = {'a' : 1, 'aaaa' : 28, 'cname' : 5, 'ns' : 2, 'mx' : 15, 'soa' : 6}
 
 
-# initialize DB connection
-def init_db(db_url):
-  __all__ = ['Session', 'Base']
-
-  db = sqlalchemy.create_engine(db_url)
-  Session = scoped_session(sessionmaker(bind=db, autoflush=False, autocommit=False))
-
-  return Session
-
-
 class CustomJsonEncoder(json.JSONEncoder):
   def default(self, obj):
     if isinstance(obj, datetime.datetime):
@@ -52,11 +43,51 @@ class CustomJsonEncoder(json.JSONEncoder):
     return json.JSONEncoder.default(self, obj)
 
 
+# initialize DB connection
+def init_db(db_url):
+  __all__ = ['Session', 'Base']
+
+  db = sqlalchemy.create_engine(db_url)
+  Session = scoped_session(sessionmaker(bind=db, autoflush=False, autocommit=False))
+
+  return Session
+
+
+def is_authorized():
+  if not cherrypy.request.headers.get('key', '') in cherrypy.config['api_keys']:
+    raise cherrypy.HTTPError(403, 'Forbidden')
+
+
+def audit():
+  log('{0} {1} {2}'.format(cherrypy.request.headers.get('remote-addr', 'NONE'), cherrypy.request.headers.get('key', ''),
+    cherrypy.request.request_line))
+
+
+cherrypy.tools.is_authorized = cherrypy.Tool('before_handler', is_authorized, priority = 49)
+cherrypy.tools.audit = cherrypy.Tool('before_handler', audit, priority = 50)
+
+
+def log(msg, priority=syslog.LOG_INFO):
+  '''
+  Central logging method
+
+  :param msg: message
+  :param priority: message priority
+  :type msg: str
+  :type priority: syslog.LOG_*
+  '''
+
+  syslog.syslog(priority, msg)
+
+
+
 class Manage(object):
   def __init__(self, Session):
     self.db = Session
 
   @cherrypy.expose
+  @cherrypy.tools.audit()
+  @cherrypy.tools.is_authorized()
   @cherrypy.tools.json_in()
   @cherrypy.tools.json_out()
   def get_domain_entries(self):
@@ -80,6 +111,8 @@ class Manage(object):
     return json.dumps(out, cls=CustomJsonEncoder)
 
   @cherrypy.expose
+  @cherrypy.tools.audit()
+  @cherrypy.tools.is_authorized()
   @cherrypy.tools.json_in()
   @cherrypy.tools.json_out()
   def get_domains_by_record_value(self):
@@ -103,6 +136,8 @@ class Manage(object):
     return json.dumps(out, cls=CustomJsonEncoder)
 
   @cherrypy.expose
+  @cherrypy.tools.audit()
+  @cherrypy.tools.is_authorized()
   @cherrypy.tools.json_in()
   @cherrypy.tools.json_out()
   def check_domains(self):
@@ -207,13 +242,14 @@ cherrypy.config.update({'error_page.403': error_page_403})
 
 
 def application(environ, start_response):
+  syslog.openlog('passive_dns_wsgi_server', logoption=syslog.LOG_PID)
   myprefix = os.path.dirname(os.path.abspath(__file__))
   wsgi_config = myprefix + '/wsgi_api.ini'
 
   if not os.path.exists(wsgi_config):
     wsgi_config = '/etc/passivedns_wsgi_api.ini'
   if not os.path.exists(wsgi_config):
-    print('Fatal error: config file not found!')
+    log('Fatal error: config file not found!', priority=syslog.LOG_ERR)
     sys.exit(1)
 
 
@@ -237,17 +273,19 @@ def application(environ, start_response):
 
   cherrypy.tree.mount(Manage(db), '/', config=wsgi_config)
 
+  log('starting')
   return cherrypy.tree(environ, start_response)
 
 
 if __name__ == '__main__':
+  syslog.openlog('passive_dns_wsgi_server', logoption=syslog.LOG_PID)
   myprefix = os.path.dirname(os.path.abspath(__file__))
   wsgi_config = myprefix + '/wsgi_api.ini'
 
   if not os.path.exists(wsgi_config):
     wsgi_config = '/etc/passivedns_wsgi_api.ini'
   if not os.path.exists(wsgi_config):
-    print('Fatal error: config file not found!')
+    log('Fatal error: config file not found!', priority=syslog.LOG_ERR)
     sys.exit(1)
 
 
@@ -270,4 +308,5 @@ if __name__ == '__main__':
   cherrypy.config['tools.encode.encoding'] = 'utf-8'
   cherrypy.config.update(config=wsgi_config)
 
+  log('starting')
   cherrypy.quickstart(Manage(db), '/', config=wsgi_config)
