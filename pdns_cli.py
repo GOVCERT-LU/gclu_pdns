@@ -1,234 +1,133 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
+from __future__ import print_function
 
-# Copyright (c) 2013 GOVCERT.LU / Georges Toth & Foetz Guy
+__author__ = 'Georges Toth'
+__email__ = 'georges.toth@govcert.etat.lu'
+__copyright__ = 'Copyright 2013, Georges Toth'
+__license__ = 'GPL v3+'
+
+#
+# mail feature extractor
+# submits results to a remote mailm0n server via REST API
+#
 
 import sys
-import re
+import os
+try:
+  import ConfigParser as configparser
+except ImportError:
+  import configparser
 from optparse import OptionParser
-import ConfigParser
-import mmap
-from datetime import datetime
-from sqlalchemy.orm import sessionmaker, scoped_session
-from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
-from sqlalchemy import and_
-import sqlalchemy
-from sqlalchemy.sql.expression import case, exists
-from db_model import Base, Session, Domain, Entry, Parent_Domain, Sensor, Sensor_Domain, DNS_Server
-from multiprocessing import Pool
-import multiprocessing
-import traceback
+import json
+import gclu_pdns.api
 
 
-filter_rrtype = {'a' : 1, 'aaaa' : 28, 'cname' : 5, 'ns' : 2, 'mx' : 15, 'soa' : 6}
-filter_rrtype_rev = {1: 'a', 28: 'aaaa', 5: 'cname', 2: 'ns', 15: 'mx', 6: 'soa'}
-filter_res_lengths = [5, 6, 11]
-filter_unwanted_rrtype = [15, 50, 46, 43, 47, 12]
-sensor_name = ""
-records = {}
-cl_records = {}
+def main(api_url, api_key, proxies):
+  api = gclu_pdns.api.PDNSApi(api_url, api_key, verify_ssl=False, proxies=proxies)
 
+  #j = api.get_domain_entries('google.org', ['a', 'mx'])
+  #j = api.check_domains(['google.org', 'google.cn'])
+  #j = api.check_domains(['google'], search_like=True)
+  j = api.get_domains_by_a_record('173.194.70.139')
+  #j = api.get_domains_by_a_record('127.0.0.1')
 
-# initialize DB connection and create DB if not exist
-def init_db(db_url):
-  __all__ = ['Session', 'Base']
-
-  db = sqlalchemy.create_engine(db_url)
-  Session = scoped_session(sessionmaker(bind=db, autoflush=False, autocommit=False))
-
-  return Session
-
-
-def print_parent_domain_like(db, name):
-  q = db.query(Parent_Domain)
-  q = q.filter(Parent_Domain.parent_domain_name.like('%' + name))
-
-  for r in q:
-    print r
-    print_domain_parent_id(db, r.parent_domain_id)
-    print
-
-
-def print_parent_domain_name(db, name):
-  q = db.query(Parent_Domain)
-  q = q.filter(Parent_Domain.parent_domain_name == name)
-
-  for r in q:
-    print r
-    print_domain_parent_id(db, r.parent_domain_id)
-
-
-def get_low_ttl_parent_domains(db, ttl):
-  q = db.query(Parent_Domain.parent_domain_name)
-  q = q.filter(and_(Parent_Domain.parent_domain_id == Domain.parent_domain_id, Domain.domain_id == Entry.domain_id, Entry.ttl <= ttl))
-  domains = []
-  ret = q.all()
-
-  for k in ret:
-    domains.append(k[0])
-
-  domains = list(set(domains))
-
-  return domains
-
-
-def get_entries(db, record_type, value):
-  q = db.query(Entry)
-  q = q.filter(and_(Entry.type == filter_rrtype[record_type], Entry.value == value)).order_by(Entry.domain_id.desc())
-  entries = []
-
-  for k in q:
-    entries.append(k)
-
-  return entries
-
-
-# @FIXME for some reason a relationship does not work, investigate and fix
-def get_domain_name(db, domain_id):
-  q = db.query(Domain.domain_name)
-  q = q.filter(Domain.domain_id == domain_id)
-
-  try:
-    o = q.one()
-    return o[0]
-  except NoResultFound:
-    return 'domain not found'
-
-
-def print_domain_parent_id(db, parent_domain_id):
-  q = db.query(Domain)
-  q = q.filter(Domain.parent_domain_id == parent_domain_id)
-
-  for r in q:
-    print r
-    print_domain_id(db, r.domain_id)
-
-
-def print_domain_like(db, name):
-  q = db.query(Domain)
-  q = q.filter(Domain.domain_name.like('%' + name + '%'))
-
-  for r in q:
-    print r
-    print_domain_id(db, r.domain_id)
-
-
-def print_domain_name(db, domain):
-  q = db.query(Domain)
-  q = q.filter(Domain.domain_name == domain)
-
-  try:
-    o = q.one()
-    print ' domain: {0}'.format(str(o))
-    print_domain_id(db, o.domain_id)
-  except NoResultFound:
-    print ' no result'
-
-
-def print_domain_id(db, domain_id):
-  q = db.query(Entry)
-  q = q.filter(Entry.domain_id == domain_id).order_by(Entry.type.desc(), Entry.value.desc())
-
-  for r in q:
-    print '  ' + str(r)
-
+  j = gclu_pdns.api.json_pretty_print(j)
+  print(j)
 
 
 if __name__ == '__main__':
-  parser = OptionParser()
-  parser.add_option('--csv', dest='csvdump', action='store_true', default=False,
-                    help='dump the data as CSV')
-  parser.add_option('-s', dest='sensor', type='string', default='',
-                    help='sensor name')
-  parser.add_option('-c', dest='config', type='string', default='',
-                    help='configuration file')
-  parser.add_option('-d', dest='domain', type='string', default='',
-                    help='domain to search for')
-  parser.add_option('--ld', dest='likedomain', type='string', default='',
-                    help='domain to be used for like query (make sure you know what you are doing!!!!)')
-  parser.add_option('--lttl', dest='lowttl', type='int', default=-1,
-                    help='get all domains with low TTL as specified (expensive query make sure you know what you are doing!!!!)')
-  parser.add_option('--r-a', dest='record_a', type='string', default='',
-                    help='A record to search for')
-  parser.add_option('-e', dest='entries', action='store_true', default=False,
-                    help='search for entries; also specify record type and record value')
-  parser.add_option('--e-rt', dest='record_type', type='string', default='',
-                    help='record type')
-  parser.add_option('--e-rv', dest='record_value', type='string', default='',
-                    help='record value')
-  parser.add_option('--sep', dest='separator', type='string', default='|',
-                    help='separator to use for verbose/csv output')
-  parser.add_option('-v', dest='verbose', action='store_true', default=False,
-                    help='verbose')
+  config_file = os.path.expanduser('~/.pdns_cli.conf')
+  if not os.path.isfile(config_file):
+    print('Fatal error: config file not found!')
+    sys.exit(1)
 
+  config = configparser.ConfigParser()
+  config.read(config_file)
+
+  try:
+    api_url = config.get('api', 'url')
+    api_key = config.get('api', 'key')
+    http_proxy = config.get('api', 'http_proxy')
+    https_proxy = config.get('api', 'https_proxy')
+  except:
+    print('Fatal error: invalid config file!')
+    sys.exit(1)
+
+  proxies = {}
+  if not http_proxy == '':
+    proxies['http'] = http_proxy
+  if not https_proxy == '':
+    proxies['https'] = https_proxy
+
+  api = gclu_pdns.api.PDNSApi(api_url, api_key, verify_ssl=False, proxies=proxies)
+
+  parser = OptionParser()
+  parser.add_option('-d', dest='domain', type='string', default='',
+                    help='comma seperated list of domains to search for (e.g. test1.com,test2.com)')
+  parser.add_option('--ld', dest='likedomain', type='string', default='',
+                    help='domain to be used for like query (make sure you know what you are doing!)')
+  parser.add_option('--r-a', dest='record_a', type='string', default='',
+                    help='A record value to search for')
+  parser.add_option('-r', dest='records', type='string', default='',
+                    help='comma seperated list of records to search for (e.g. a,mx,aaaa)')
+  parser.add_option('-e', dest='entries', action='store_true', default=False,
+                    help='get entries for domain')
 
   (options, args) = parser.parse_args()
 
-  if options.domain == '' and options.likedomain == '' and options.lowttl == -1 and not options.entries and options.record_a == '':
-    parser.print_help()
-    exit(1)
-  elif not options.domain == '' and not options.likedomain == '':
-    print 'specify _either_ domain _or_ likedomain !!!'
-    exit(1)
-  elif options.entries and (options.record_type == '' or options.record_value == ''):
-    print 'specify record type _and_ record  value !!!'
-    exit(1)
-  if options.config.strip(' ') == '':
-    print 'ERROR: config file required'
-    print
+
+  if options.domain == '' and options.likedomain == '' and options.record_a == '':
     parser.print_help()
     exit(1)
 
-
-  ####################
-  # read DB config
-  config = ConfigParser.RawConfigParser()
-  config.read(options.config)
-
-  db_user = config.get('dbro', 'user')
-  db_pass = config.get('dbro', 'pass')
-  db_host = config.get('dbro', 'host')
-  db_db = config.get('dbro', 'db')
-
-  db_url = 'postgresql+psycopg2://{0}:{1}@{2}/{3}'.format(db_user, db_pass, db_host, db_db)
-  ####################
-
-
-  db = init_db(db_url)
-
+  domains = []
+  likedomains = []
+  record_a = ''
+  records = []
+  entries = options.entries
   if not options.domain == '':
-    if len(options.domain.split('.')) == 2:
-      print_parent_domain_name(db, options.domain)
-    else:
-      print_domain_name(db, options.domain)
-  elif not options.likedomain == '':
-    if len(options.likedomain.split('.')) == 2:
-      print_parent_domain_like(db, options.likedomain)
-    else:
-      print_domain_like(db, options.likedomain)
-  elif not options.lowttl == -1:
-    for k in get_low_ttl_parent_domains(db, options.lowttl):
-      print k
-  elif options.entries:
-    entries = get_entries(db, options.record_type, options.record_value)
-    last_domain_id = -1
-    for k in entries:
-      if not k.domain_id == last_domain_id:
-        print get_domain_name(db, k.domain_id)
-        last_domain_id = k.domain_id
-      print '  ' + str(k)
-  elif not options.record_a == '':
-    entries = get_entries(db, 'a', options.record_a)
-    last_domain_id = -1
-    seen_domains = set()
-    for k in entries:
-      if not k.domain_id in seen_domains:
-        seen_domains.add(k.domain_id)
-      else:
-        continue
+    domains = options.domain.split(',')
+  if not options.likedomain == '':
+    likedomains = options.likedomain.split(',')
+  if not options.record_a == '':
+    record_a = options.record_a
+  if not options.records == '':
+    records = options.records.split(',')
 
-      domain_name = get_domain_name(db, k.domain_id)
 
-      if options.verbose:
-        print '{1}{0}{2}{0}{3}{0}{4}'.format(options.separator, domain_name, k.first_seen, k.last_seen, k.count)
-      else:
-        print domain_name
+  if entries and len(domains) > 0:
+    j = {}
+    for d in domains:
+      j.update(api.get_domain_entries(d, records))
+  elif len(domains) > 0 or len(likedomains) > 0:
+    like = False
+    if len(likedomains) > 0:
+      like = True
+
+    domains += likedomains
+    j = api.check_domains(domains, search_like=like)
+  elif not record_a == '':
+    j = api.get_domains_by_a_record(record_a)
+  else:
+    print('Fatal error: nothing to do O_o, check parameters!')
+    print()
+    parser.print_help()
+    exit(1)
+
+
+  j = gclu_pdns.api.json_pretty_print(j)
+  print(j)
+
+
+  sys.exit(1)
+  try:
+    main()
+  except KeyboardInterrupt:
+    sys.exit(1)
+  except Exception as e:
+    import traceback
+    print(traceback.format_exc())
+    print('{0}'.format(e))
+    sys.exit(1)
+
