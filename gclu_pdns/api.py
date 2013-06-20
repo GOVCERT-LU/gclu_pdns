@@ -11,7 +11,8 @@ __license__ = 'GPL v3+'
 #
 
 import json
-import requests
+#import requests
+import urllib2
 
 
 
@@ -22,6 +23,11 @@ class PDNSApi(object):
     self.verify_ssl = verify_ssl
     self.proxies = proxies
 
+    if len(proxies) > 0:
+      proxy = urllib2.ProxyHandler(proxies)
+      opener = urllib2.build_opener(proxy)
+      urllib2.install_opener(opener)
+
   def __request(self, method, data, extra_headers=None):
     url = '{0}/{1}'.format(self.api_url, method)
     headers = {'Content-Type': 'application/json; charset=utf-8', 'key' : self.api_key}
@@ -30,6 +36,8 @@ class PDNSApi(object):
       for k, v in extra_headers.items():
         headers[k] = v
 
+    # disable usage of requests module as https over proxy support is broken
+    '''
     r = requests.post(url, data=json.dumps(data), headers=headers, verify=self.verify_ssl, proxies=self.proxies)
 
     r_text = r.text
@@ -42,6 +50,20 @@ class PDNSApi(object):
       raise Exception('Error ({0})'.format(rest_msg_text))
 
     return json.loads(r.json)
+    '''
+
+    r = urllib2.Request(url, data=json.dumps(data), headers=headers)
+    try:
+      res = urllib2.urlopen(r).read()
+    except urllib2.HTTPError, e:
+      raise Exception('Error ({0})'.format(e.code))
+    except urllib2.URLError, e:
+      raise Exception('Error ({0})'.format(e.reason.args[1]))
+
+    # @FIXME why do we need to load json twice? -> doing it once returns an unquoted string O_o
+    res = json.loads(res)
+
+    return json.loads(res)
 
   def get_domain_entries(self, domain, records):
     return self.__request('get_domain_entries', {'domain' : domain, 'records' : records})
