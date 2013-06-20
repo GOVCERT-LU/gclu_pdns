@@ -229,7 +229,7 @@ class Manage(object):
     return q.scalar()
 
   def _search_domain_by_record_value(self, record_type, value):
-    q = db.query(Entry.domain_id)
+    q = self.db.query(Entry.domain_id)
     q = q.filter(and_(Entry.type == record_type, Entry.value == value))
     ret = []
 
