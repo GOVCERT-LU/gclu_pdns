@@ -155,8 +155,8 @@ if __name__ == '__main__':
         filename_part = '{0}.part'.format(filename)
         log = open(filename_part, 'wb')
 
-
-      row = l.lower().split(',')
+      l = l.lower()
+      row = l.split(',')
 
       # check if entry length matches anything we care about
       if not len(row) in filter_res_lengths:
