@@ -39,10 +39,9 @@ filter_domains = False
 ignore_domains_file = ''
 ignore_domains = []
 
-record_type = {'a' : 1, 'aaaa' : 28, 'cname' : 5, 'ns' : 2, 'mx' : 15, 'soa' : 6, 'ptr' : 12, 'txt' : 16}
+record_type = {'a': 1, 'aaaa': 28, 'cname': 5, 'ns': 2, 'mx': 15, 'soa': 6, 'ptr': 12, 'txt': 16}
 filter_res_lengths = [7, 8, 13]
 blacklist_record_types = ['43', '46', '47', '50', '99', '16', 'ds', 'rrsig', 'nsec3', 'spf', 'txt']
-
 
 
 def signal_handler(signal, frame):
@@ -66,7 +65,7 @@ def reload_ignore_domains(signal=None, frame=None):
 
   if debug:
     print 'reloading ignore domains...'
-  
+
   new_ignore_domains = []
   f = open(ignore_domains_file, 'rb')
 
