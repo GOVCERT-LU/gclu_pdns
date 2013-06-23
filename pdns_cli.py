@@ -76,7 +76,6 @@ if __name__ == '__main__':
 
   (options, args) = parser.parse_args()
 
-
   if options.domain == '' and options.likedomain == '' and options.record_a == '':
     parser.print_help()
     exit(1)
@@ -94,7 +93,6 @@ if __name__ == '__main__':
     record_a = options.record_a
   if not options.records == '':
     records = options.records.split(',')
-
 
   if entries and len(domains) > 0:
     j = {}
@@ -115,10 +113,8 @@ if __name__ == '__main__':
     parser.print_help()
     exit(1)
 
-
   j = gclu_pdns.api.json_pretty_print(j)
   print(j)
-
 
   sys.exit(1)
   try:
@@ -130,4 +126,3 @@ if __name__ == '__main__':
     print(traceback.format_exc())
     print('{0}'.format(e))
     sys.exit(1)
-

@@ -19,7 +19,7 @@ import multiprocessing
 import traceback
 
 
-filter_rrtype = {'a' : 1, 'aaaa' : 28, 'cname' : 5, 'ns' : 2, 'mx' : 15, 'soa' : 6}
+filter_rrtype = {'a': 1, 'aaaa': 28, 'cname': 5, 'ns': 2, 'mx': 15, 'soa': 6}
 filter_res_lengths = [5, 6, 11]
 filter_unwanted_rrtype = [15, 50, 46, 43, 47, 12]
 sensor_name = ""
@@ -32,6 +32,7 @@ class BaseEntry(object):
     self.fs = date
     self.ls = date
     self.oid = None
+
 
 class MParentDomain(BaseEntry):
   def __init__(self, name, date):
@@ -77,6 +78,7 @@ class MParentDomain(BaseEntry):
 
     return self.oid
 
+
 def db_add_parent(sensor_id, i, db_url):
   db = init_db(db_url)
   ids = {}
@@ -97,6 +99,7 @@ def db_add_parent(sensor_id, i, db_url):
             raise
 
   return ids
+
 
 class MDomain(BaseEntry):
   def __init__(self, name, date):
@@ -143,10 +146,10 @@ class MDomain(BaseEntry):
       self.oid = o.domain_id
 
       sd = Sensor_Domain()
-      sd.domain_id  = self.oid
-      sd.sensor_id  = sensor_id
+      sd.domain_id = self.oid
+      sd.sensor_id = sensor_id
       sd.first_seen = self.fs
-      sd.last_seen  = self.ls
+      sd.last_seen = self.ls
 
       db.add(sd)
       db.flush()
@@ -155,9 +158,8 @@ class MDomain(BaseEntry):
 
       q = db.query(Sensor_Domain)
       q = q.filter(and_(Sensor_Domain.domain_id == self.oid, Sensor_Domain.sensor_id == sensor_id))
-      q.update({Sensor_Domain.first_seen : case([(Sensor_Domain.first_seen > self.fs, self.fs)], else_=Sensor_Domain.first_seen),
-                Sensor_Domain.last_seen : case([(Sensor_Domain.last_seen < self.ls, self.ls)], else_=Sensor_Domain.last_seen)}, synchronize_session=False)
-
+      q.update({Sensor_Domain.first_seen: case([(Sensor_Domain.first_seen > self.fs, self.fs)], else_=Sensor_Domain.first_seen),
+                Sensor_Domain.last_seen: case([(Sensor_Domain.last_seen < self.ls, self.ls)], else_=Sensor_Domain.last_seen)}, synchronize_session=False)
 
     return self.oid
 
@@ -207,13 +209,13 @@ class MEntry(object):
 
       try:
         q = db.query(Entry)
-        q = q.filter(and_(Entry.domain_id == domain_id, Entry.type == rr, Entry.ttl == ttl,  Entry.value == value))
-        q.update({Entry.first_seen : case([(Entry.first_seen > v[1], v[1])], else_=Entry.first_seen),
-                  Entry.last_seen : case([(Entry.last_seen < v[2], v[2])], else_=Entry.last_seen),
-                  Entry.count : Entry.count + v[0]}, synchronize_session=False)
+        q = q.filter(and_(Entry.domain_id == domain_id, Entry.type == rr, Entry.ttl == ttl, Entry.value == value))
+        q.update({Entry.first_seen: case([(Entry.first_seen > v[1], v[1])], else_=Entry.first_seen),
+                  Entry.last_seen: case([(Entry.last_seen < v[2], v[2])], else_=Entry.last_seen),
+                  Entry.count: Entry.count + v[0]}, synchronize_session=False)
 
         q = db.query(Entry.entry_id)
-        o = q.filter(and_(Entry.domain_id == domain_id, Entry.type == rr, Entry.ttl == ttl,  Entry.value == value)).one()
+        o = q.filter(and_(Entry.domain_id == domain_id, Entry.type == rr, Entry.ttl == ttl, Entry.value == value)).one()
 
         oid = o[0]
       except NoResultFound:
@@ -239,9 +241,9 @@ class MEntry(object):
 
           q = db.query(DNS_Server)
           q = q.filter(and_(DNS_Server.entry_id == oid, DNS_Server.ip == s))
-          q.update({DNS_Server.first_seen : case([(DNS_Server.first_seen > sv[1], sv[1])], else_=DNS_Server.first_seen),
-                    DNS_Server.last_seen : case([(DNS_Server.last_seen < sv[2], sv[2])], else_=DNS_Server.last_seen),
-                    DNS_Server.count : DNS_Server.count + sv[0]}, synchronize_session=False)
+          q.update({DNS_Server.first_seen: case([(DNS_Server.first_seen > sv[1], sv[1])], else_=DNS_Server.first_seen),
+                    DNS_Server.last_seen: case([(DNS_Server.last_seen < sv[2], sv[2])], else_=DNS_Server.last_seen),
+                    DNS_Server.count: DNS_Server.count + sv[0]}, synchronize_session=False)
 
         except NoResultFound:
           dns_server = DNS_Server()
@@ -282,7 +284,6 @@ def process_record(date, ans, serv):
   except:
     parent = domain
 
-
   if not parent in cl_records:
     cl_records[parent] = MParentDomain(parent, date)
 
@@ -302,7 +303,6 @@ def csvdump(recs, sep='|', print_title=True):
               print ('{0}' + sep + '{1}' + sep + '{2}' + sep + '{3}' + sep + '{4}' + sep + '{5}' + sep + '{6}' + sep + '{7}').format(domain, srv, rr, ttl, value, info[1], info[2], info[0])
 
 
-
 # initialize DB connection and create DB if not exist
 def init_db(db_url):
   __all__ = ['Session', 'Base']
@@ -313,9 +313,6 @@ def init_db(db_url):
   Session = scoped_session(sessionmaker(bind=db, autoflush=False, autocommit=True))
 
   return Session
-
-
-
 
 if __name__ == '__main__':
   parser = OptionParser()
@@ -437,7 +434,6 @@ if __name__ == '__main__':
   #print 'ignored domains: {0}'.format(domains_ignored)
   #exit(1)
 
-
   # cleanup open file / mmap handles
   if not mf is None:
     mf.close()
@@ -475,7 +471,7 @@ if __name__ == '__main__':
     count = 0
     for key in keys:
       i = count / split
-      try: 
+      try:
         dicts[i][key] = cl_records[key]
       except:
         dicts.append({})

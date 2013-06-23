@@ -39,16 +39,16 @@ class Entry(Base):
 
   def __str__(self):
     return 'type: {0}, ttl: {1}, value: {2}, first_seen: {3}, last_seen: {4}, count: {5}'.format(
-      filter_rrtype_rev[self.type], self.ttl, self.value, self.first_seen, self.last_seen, self.count)
+        filter_rrtype_rev[self.type], self.ttl, self.value, self.first_seen, self.last_seen, self.count)
 
   def get_dict(self):
-    return {'type' : filter_rrtype_rev[self.type], 'ttl' : self.ttl, 'value' : self.value, 'first_seen' : self.first_seen,
-            'last_seen' : self.last_seen, 'count' : self.count}
+    return {'type': filter_rrtype_rev[self.type], 'ttl': self.ttl, 'value': self.value, 'first_seen': self.first_seen,
+            'last_seen': self.last_seen, 'count': self.count}
 
 
 class Parent_Domain(Base):
-  __tablename__ = 'parent_domain' 
- 
+  __tablename__ = 'parent_domain'
+
   parent_domain_id = Column(BigInteger, primary_key=True, autoincrement=True)
   parent_domain_name = Column(String)
 
@@ -57,24 +57,24 @@ class Parent_Domain(Base):
 
 
 class Sensor(Base):
-  __tablename__ = 'sensor' 
+  __tablename__ = 'sensor'
 
   sensor_id = Column(BigInteger, primary_key=True, autoincrement=True)
   sensor_name = Column(String)
 
-  
-class Sensor_Domain(Base):
-  __tablename__ = 'sensor_domain' 
 
-  domain_id = Column(BigInteger, ForeignKey('domain.domain_id'), primary_key=True, autoincrement=True) 
-  sensor_id = Column(BigInteger, ForeignKey('sensor.sensor_id'), primary_key=True, autoincrement=True) 
+class Sensor_Domain(Base):
+  __tablename__ = 'sensor_domain'
+
+  domain_id = Column(BigInteger, ForeignKey('domain.domain_id'), primary_key=True, autoincrement=True)
+  sensor_id = Column(BigInteger, ForeignKey('sensor.sensor_id'), primary_key=True, autoincrement=True)
   first_seen = Column(DateTime)
   last_seen = Column(DateTime)
 
 
 class DNS_Server(Base):
   __tablename__ = 'dns_server'
-  
+
   dns_server_id = Column(BigInteger, primary_key=True, autoincrement=True)
   entry_id = Column(BigInteger, ForeignKey('entry.entry_id'))
   ip = Column(CIDR)

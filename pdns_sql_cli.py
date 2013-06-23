@@ -19,7 +19,7 @@ import multiprocessing
 import traceback
 
 
-filter_rrtype = {'a' : 1, 'aaaa' : 28, 'cname' : 5, 'ns' : 2, 'mx' : 15, 'soa' : 6}
+filter_rrtype = {'a': 1, 'aaaa': 28, 'cname': 5, 'ns': 2, 'mx': 15, 'soa': 6}
 filter_rrtype_rev = {1: 'a', 28: 'aaaa', 5: 'cname', 2: 'ns', 15: 'mx', 6: 'soa'}
 filter_res_lengths = [5, 6, 11]
 filter_unwanted_rrtype = [15, 50, 46, 43, 47, 12]
@@ -132,7 +132,6 @@ def print_domain_id(db, domain_id):
     print '  ' + str(r)
 
 
-
 if __name__ == '__main__':
   parser = OptionParser()
   parser.add_option('--csv', dest='csvdump', action='store_true', default=False,
@@ -160,7 +159,6 @@ if __name__ == '__main__':
   parser.add_option('-v', dest='verbose', action='store_true', default=False,
                     help='verbose')
 
-
   (options, args) = parser.parse_args()
 
   if options.domain == '' and options.likedomain == '' and options.lowttl == -1 and not options.entries and options.record_a == '':
@@ -178,7 +176,6 @@ if __name__ == '__main__':
     parser.print_help()
     exit(1)
 
-
   ####################
   # read DB config
   config = ConfigParser.RawConfigParser()
@@ -191,7 +188,6 @@ if __name__ == '__main__':
 
   db_url = 'postgresql+psycopg2://{0}:{1}@{2}/{3}'.format(db_user, db_pass, db_host, db_db)
   ####################
-
 
   db = init_db(db_url)
 

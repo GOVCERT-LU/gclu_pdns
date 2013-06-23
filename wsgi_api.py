@@ -29,7 +29,7 @@ from sqlalchemy.sql.expression import exists
 from gclu_pdns.db_model import Base, Session, Domain, Entry, Parent_Domain, Sensor, Sensor_Domain, DNS_Server
 
 
-filter_rrtype = {'a' : 1, 'aaaa' : 28, 'cname' : 5, 'ns' : 2, 'mx' : 15, 'soa' : 6}
+filter_rrtype = {'a': 1, 'aaaa': 28, 'cname': 5, 'ns': 2, 'mx': 15, 'soa': 6}
 
 
 class CustomJsonEncoder(json.JSONEncoder):
@@ -66,11 +66,11 @@ def audit():
       params[k] = cherrypy.request.json[k]
 
   log('{0} {1} {2} {3}'.format(cherrypy.request.headers.get('remote-addr', 'NONE'), cherrypy.request.headers.get('key', ''),
-    cherrypy.request.request_line, str(params)))
+      cherrypy.request.request_line, str(params)))
 
 
-cherrypy.tools.is_authorized = cherrypy.Tool('before_handler', is_authorized, priority = 49)
-cherrypy.tools.audit = cherrypy.Tool('before_handler', audit, priority = 50)
+cherrypy.tools.is_authorized = cherrypy.Tool('before_handler', is_authorized, priority=49)
+cherrypy.tools.audit = cherrypy.Tool('before_handler', audit, priority=50)
 
 
 def log(msg, priority=syslog.LOG_INFO):
@@ -84,7 +84,6 @@ def log(msg, priority=syslog.LOG_INFO):
   '''
 
   syslog.syslog(priority, msg)
-
 
 
 class Manage(object):
@@ -101,7 +100,7 @@ class Manage(object):
     domain = params['domain']
     records = params.get('records', [])
 
-    out = {'domain' : domain, 'entries' : []}
+    out = {'domain': domain, 'entries': []}
 
     try:
       domain_id = self._get_domain_id(domain)
@@ -181,7 +180,7 @@ class Manage(object):
         ret[domain] = False
 
     return ret
-    
+
   def _search_domain(self, domain):
     q = self.db.query(Domain.domain_id, Domain.domain_name)
     q = q.filter(Domain.domain_name.like('%' + domain + '%'))
@@ -240,7 +239,6 @@ class Manage(object):
     return sorted(tuple(ret))
 
 
-
 def error_page_403(status, message, traceback, version):
   return 'Error {0} - {1}'.format(status, message)
 
@@ -257,7 +255,6 @@ def application(environ, start_response):
   if not os.path.exists(wsgi_config):
     log('Fatal error: config file not found!', priority=syslog.LOG_ERR)
     sys.exit(1)
-
 
   ####################
   # read DB config
@@ -293,7 +290,6 @@ if __name__ == '__main__':
   if not os.path.exists(wsgi_config):
     log('Fatal error: config file not found!', priority=syslog.LOG_ERR)
     sys.exit(1)
-
 
   ####################
   # read DB config
